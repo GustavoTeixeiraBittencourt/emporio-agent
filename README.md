@@ -93,14 +93,14 @@ python scripts/record_scenarios.py
 ### Providers
 
 Any OpenAI-compatible `/chat/completions` endpoint works -- just set three
-env vars. Default is Llama 3.3 70B on Groq because it has a free tier and
-fast inference, so anyone evaluating this can run it at zero cost. The
-recorded `examples/` were generated with `openai/gpt-oss-120b` on Groq
-(also free), which is a one-line `LLM_MODEL` change and works the same way.
+env vars. Default is `openai/gpt-oss-120b` on Groq because it has a free
+tier, fast inference and solid tool calling, so anyone evaluating this can
+run it at zero cost. The recorded `examples/` were generated with this same
+model.
 
 | Provider | `LLM_BASE_URL` | `LLM_MODEL` | Notes |
 |---|---|---|---|
-| **Groq (default)** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` | Free tier, key at [console.groq.com/keys](https://console.groq.com/keys) |
+| **Groq (default)** | `https://api.groq.com/openai/v1` | `openai/gpt-oss-120b` | Free tier, key at [console.groq.com/keys](https://console.groq.com/keys) |
 | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` | Free tier, key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` | Paid |
 | Ollama (local) | `http://localhost:11434/v1` | any pulled model, e.g. `llama3.1` | Free, no key needed (use any placeholder string), but local tool-calling quality varies by model |
@@ -123,7 +123,7 @@ dependency and an abstraction layer for a loop that's ~40 lines of plain
 Python here -- not worth it at this scale, and it would obscure exactly
 the decision logic this challenge is evaluating.
 
-**Model / provider -- Llama 3.3 70B on Groq via its OpenAI-compatible endpoint,
+**Model / provider -- gpt-oss-120b on Groq via its OpenAI-compatible endpoint,
 temperature 0.3.** Chosen for being free, fast, and good enough at
 structured tool calling; the OpenAI SDK against an OpenAI-compatible
 `base_url` means swapping to OpenAI or a local Ollama model is a 3-line

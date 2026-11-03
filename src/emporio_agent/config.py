@@ -21,7 +21,7 @@ HANDOFFS_PATH = Path(os.environ.get("EMPORIO_HANDOFFS_PATH", PROJECT_ROOT / "han
 
 LLM_API_KEY = os.environ.get("LLM_API_KEY")
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b")
 LLM_TEMPERATURE = 0.3
 
 MAX_TOOL_ROUNDS = 6
