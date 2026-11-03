@@ -260,6 +260,14 @@ chunks.
   a real deployment would put this in Postgres (or similar) so stock/price
   updates don't require a redeploy, and so multiple agent processes share
   one consistent view of the data.
+- **Free-tier rate limits.** Groq's free plan caps daily tokens (200k/day
+  for `gpt-oss-120b`), and every turn resends the system prompt plus history,
+  with 2-3 model calls for a simple price question. When the quota runs out
+  the API answers HTTP 429 and the OpenAI SDK retries with back-off, which
+  looks like slowness rather than an error; if retries fail the CLI prints
+  an error and keeps the chat open. Mitigations with more time: fewer tool
+  rounds per question, a lower reasoning effort, trimming old tool results
+  from the history, and streaming the answer.
 - **No observability.** Tool calls and escalations are visible via
   `--debug` and `handoffs.jsonl`, but there's no structured logging,
   tracing, or metrics on latency/tool-error-rate/escalation-rate -- all of
