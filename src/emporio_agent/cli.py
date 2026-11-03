@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import uuid
 
 from openai import OpenAI
@@ -22,6 +23,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--session", dest="session_id", default=None, help="Retoma uma sessão existente pelo ID.")
     parser.add_argument("--debug", action="store_true", help="Mostra as chamadas de ferramentas.")
     args = parser.parse_args(argv)
+
+    # Windows consoles default to cp1252 and choke on characters like U+202F.
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
     if not config.LLM_API_KEY:
         print(
