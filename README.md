@@ -77,6 +77,21 @@ python -m emporio_agent --debug          # also print each tool call + result
 pytest -q                                # run the test suite (no network, no API key needed)
 ```
 
+The sample data reads like a snapshot from March 2026 (orders, promotions and
+the "overdue" shipment all depend on today's date). To reproduce the
+conversations in `examples/`, freeze the clock the same way they were
+recorded:
+
+```bash
+AGENT_NOW=2026-03-23T11:00:00 python -m emporio_agent --debug      # bash / zsh
+```
+```powershell
+$env:AGENT_NOW="2026-03-23T11:00:00"; python -m emporio_agent --debug   # PowerShell
+```
+
+Without `AGENT_NOW` the agent uses the real clock, so date-dependent answers
+(promotions, return windows, open/closed) will differ from the examples.
+
 To regenerate `data/policies_chunks.json` after editing the policy PDF
 (requires the `pdftotext` CLI from poppler-utils):
 
@@ -131,7 +146,7 @@ structured tool calling; the OpenAI SDK against an OpenAI-compatible
 but discourages creative drift on anything numeric.
 
 **Retrieval -- hand-rolled BM25, no embeddings.** The policy manual is
-~4,000 tokens across 28 sections after ingestion. An embeddings/vector-store
+~11k characters (roughly 3-4k tokens) across 28 sections after ingestion. An embeddings/vector-store
 pipeline is the wrong tool for a corpus this small: it adds an external
 dependency, non-determinism, and real latency/cost for a problem that a
 ~150-line BM25 implementation with light PT stemming, a stopword list, and
@@ -154,7 +169,7 @@ than asking the model to reason about raw data itself.
 **Security / privacy -- enforced in code, not just prompted.** Three
 load-bearing examples: (1) `OrderBook.verify()` identifies a customer only
 by email or last-9-digits-of-phone matching the order's actual customer --
-never by name, since the dataset has duplicate names and two customers
+never by name, since the dataset has repeated first names and two customers
 (11 and 43) sharing one email; (2) `order_summary()` never includes phone
 or email, and `Product.to_public()` never includes exact stock counts;
 (3) `check_return_eligibility` hard-refuses to run unless `lookup_order`
@@ -182,6 +197,26 @@ pair is never split); the full history stays on disk.
 | Customer identity | `data.OrderBook.verify` | Email (case-insensitive) or last 9 phone digits must match the order's actual customer; name is never used, and a wrong contact and a nonexistent order return the identical error |
 | Data-quality issues | `data.OrderBook.order_summary` | Emits a `flags` list (`total_mismatch`, `overdue_shipment`, `not_yet_shipped`) instead of silently trusting `total_brl` / dates |
 | Return-date uncertainty | `rules.return_check` | The dataset only has an *estimated* delivery date, not a real receipt date; the result always says `received_date_is_estimate` and a `confidence` level, and the prompt tells the agent to ask the customer to confirm in borderline cases |
+
+## Dataset analysis
+
+Before writing any code I profiled the CSVs and the policy manual. What I
+found, and what the agent does about it:
+
+| Finding | Evidence | How the agent handles it |
+|---|---|---|
+| **Catalog is smaller than the manual claims** | 65 products in 9 categories; Sopro (Madeiras), Sopro (Metais) and Cordas Orquestrais exist in `categories.csv` but have **0 products**. The manual says "300+ instruments". | Never claims the store doesn't carry a category; says the system shows nothing right now and offers to confirm with the team (prompt rule 7). |
+| **Status vs. stock disagree** | 62 active, 2 discontinued, 1 coming soon. Product 96 (GF-3D) is `active` with stock 0; 9 active products have 1-2 units. | `Product.availability`: status wins over stock; `stock<=0` is out of stock even if active; `<=2` is "low stock". Exact counts are never exposed. |
+| **Most promotions are expired** | 25 promotion rows, only 4 with `is_active=1` (Kalani KAL-700T 10%, Ohana CK-20 20%, Crafter HT-100 18%, Taylor 110e 8%). The Takamine GD20's 12% offer is inactive. | Only active rows are applied; an expired promo is reported as expired with the current price. PIX 5% never stacks with a promotion (§6.2). |
+| **A customer e-mail is shared** | `bruno.martins@jmail.com` belongs to customers 11 and 43. No exact duplicate names, but 14 first names repeat (three Brunos, three Camilas, three Thiagos). No duplicate phones. | Identity is verified only by e-mail or phone against the order's own customer, never by name. |
+| **Inconsistent orders** | Orders 3 and 20: `total_brl` doesn't match the items. Order 8 is `shipped` past its estimated delivery. Orders 9-12 are `confirmed` with no shipment yet. | `order_summary` emits `flags` (`total_mismatch`, `overdue_shipment`, `not_yet_shipped`); the prompt says to acknowledge the problem without inventing an explanation and call `escalate_to_human`. |
+| **Order data has only an *estimated* delivery date** | `orders.csv` has `estimated_delivery`, no received date. | `return_check` uses it as a stand-in, flags `received_date_is_estimate` and a `confidence` level. |
+| **Timeline is a March 2026 snapshot** | Orders and promotions are consistent with ~March 2026. | `AGENT_NOW` freezes the clock for tests and recorded examples. |
+| **The manual contradicts itself** | WhatsApp `(67) 3341-4444` vs `(67) 3321-4500`; e-mail with an accented domain; §3 says min. R$100 per installment while §3.1 has three tiers; 30-day defect exchange (§4.2) vs 90-day legal warranty (§8.1). | Decisions are listed under **Assumptions**; the 30-90 day gap is escalated to a human instead of picking a side. |
+
+Anything the manual describes but the data can't support (e.g. §4.4
+non-exchangeable items, packaging condition) is listed under **Known
+limitations**.
 
 ## Assumptions
 
@@ -260,6 +295,15 @@ chunks.
   a real deployment would put this in Postgres (or similar) so stock/price
   updates don't require a redeploy, and so multiple agent processes share
   one consistent view of the data.
+- **Some manual rules are not enforced in code.** The manual describes them,
+  but the data has no fields to check them and the agent is not explicitly
+  told to mention them: §4.4 (items not eligible for exchange: custom/setup
+  work, "final sale" promotions, wind-instrument mouthpieces), and the
+  condition that returns need the original packaging, unused and with
+  accessories. Data-deletion requests (LGPD, §9) have no dedicated flow
+  either; today the right move is `escalate_to_human`. Out of hours, the
+  prompt carries the next opening time but does not force the agent to
+  state it.
 - **Free-tier rate limits.** Groq's free plan caps daily tokens (200k/day
   for `gpt-oss-120b`), and every turn resends the system prompt plus history,
   with 2-3 model calls for a simple price question. When the quota runs out
