@@ -20,10 +20,8 @@ SESSIONS_DIR = Path(os.environ.get("EMPORIO_SESSIONS_DIR", PROJECT_ROOT / ".sess
 HANDOFFS_PATH = Path(os.environ.get("EMPORIO_HANDOFFS_PATH", PROJECT_ROOT / "handoffs.jsonl"))
 
 LLM_API_KEY = os.environ.get("LLM_API_KEY")
-LLM_BASE_URL = os.environ.get(
-    "LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/"
-)
-LLM_MODEL = os.environ.get("LLM_MODEL", "gemini-2.5-flash")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
 LLM_TEMPERATURE = 0.3
 
 MAX_TOOL_ROUNDS = 6
