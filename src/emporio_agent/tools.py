@@ -30,7 +30,28 @@ class ToolContext:
     session: "Session"
 
 
+def _allow_null_optionals(schemas: list[dict]) -> list[dict]:
+    """Some providers (e.g. Groq) validate tool-call arguments strictly and
+    reject the `null` that models often send for omitted optional params.
+    Make every non-required parameter explicitly nullable."""
+    for schema in schemas:
+        params = schema["function"]["parameters"]
+        required = set(params.get("required", []))
+        for name, prop in params.get("properties", {}).items():
+            if name in required:
+                continue
+            if isinstance(prop.get("type"), str):
+                prop["type"] = [prop["type"], "null"]
+            if "enum" in prop and None not in prop["enum"]:
+                prop["enum"] = [*prop["enum"], None]
+    return schemas
+
+
 def build_tool_schemas(catalog: Catalog) -> list[dict]:
+    return _allow_null_optionals(_raw_tool_schemas(catalog))
+
+
+def _raw_tool_schemas(catalog: Catalog) -> list[dict]:
     category_names = catalog.list_category_names()
     return [
         {
