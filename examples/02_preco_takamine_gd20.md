@@ -48,3 +48,35 @@ Se quiser, posso buscar outros violões que estejam em promoção agora. É só 
 
 </details>
 
+
+---
+
+## Extra: sair e voltar preserva o contexto
+
+Trecho de uma sessão gravada à mão no CLI (sessão `3c32f91f`), **sem** `AGENT_NOW`
+(relógio real), separada da conversa acima. Mostra que o histórico é salvo em
+`.sessions/3c32f91f.json` e recarregado com `--session`.
+
+```text
+$ python -m emporio_agent
+Tom -- Empório da Música (sessão: 3c32f91f). Digite /sair para encerrar.
+
+Você: quanto custa o Takamine GD20?
+Tom: Takamine GD20 Dreadnought Natural
+- Preço à vista (PIX): R$ 2.089,05 (5 % de desconto)
+- Preço à vista (débito/boleto): R$ 2.199,00
+- Parcelado no cartão: até 12 x de R$ 183,25 (sem juros)
+
+Quer saber mais detalhes ou outra opção? 🎶
+
+Você: /sair
+
+$ python -m emporio_agent --session 3c32f91f
+Tom -- Empório da Música (sessão: 3c32f91f). Digite /sair para encerrar.
+
+Você: da para parcelar ele
+Tom: Sim, dá para parcelar o Takamine GD20 no cartão em até 12 x sem juros (parcela mínima de R$ 100,00). Por exemplo, 12 x de R$ 183,25. Se a compra for acima de R$ 2 000,00 você ainda pode combinar PIX (com 5 % de desconto) + cartão. Precisa de mais alguma coisa?
+```
+
+Na volta, o cliente disse apenas "ele": o Tom entendeu que era o Takamine GD20 sem
+perguntar o produto de novo, porque o histórico da sessão foi recarregado do disco.
