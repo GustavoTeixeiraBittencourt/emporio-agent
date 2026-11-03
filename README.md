@@ -272,23 +272,33 @@ chunks.
 
 ## Use of AI coding assistants
 
-I used **Claude Code** (Anthropic's CLI agent) as a collaborator, not as
-the sole author of the implementation. I wrote the Portuguese brief
-describing the architecture, file layout, and every business rule in
-detail, and implemented the project's modules myself from that brief.
-Claude Code's responsibility was narrower and concentrated on two areas:
+I used **Claude Code** (Anthropic's CLI agent) throughout the project as a
+pair-programming partner. The work was iterative: I set the direction and
+made the design calls, Claude Code did much of the typing, and we reviewed
+and fixed things together.
 
-- **Architecture.** It helped design the complete project architecture
-  up front -- the module breakdown (`config.py` through `cli.py`), the
-  PDF-ingestion and BM25 retrieval approach, and the overall file
-  layout -- before any implementation started.
-- **Tests and ad-hoc verification.** It wrote the `pytest` suite, and
-  ran the test suite and ad-hoc verification scripts continuously during
-  development (e.g. verifying every claimed data "gotcha" -- the
-  GF-3D/out-of-stock product, the duplicate customer email, the two
-  orders with mismatched totals -- by running real Python against the
-  data, and catching a synonym-mapping bug in the BM25 index that made
-  "que horas vocês abrem?" miss the opening-hours section).
+**What I did**
+- Wrote the Portuguese brief describing the architecture, file layout and
+  business rules, and made the key product and design decisions (function
+  calling over RAG/text-to-SQL, hand-rolled BM25, privacy enforced in code
+  rather than in the prompt, how to treat ambiguities in the policy manual).
+- Reviewed the generated code, spotted problems and asked for fixes.
+- Chose the provider/model, ran the agent against the real LLM, and wrote
+  the rationale for switching from Gemini 2.5 Flash to `gpt-oss-120b` on
+  Groq.
+
+**What Claude Code did**
+- Proposed the module breakdown and implemented most of the code from my
+  brief.
+- Wrote the `pytest` suite and ran it plus ad-hoc scripts against the real
+  data to check each claimed gotcha (the out-of-stock GF-3D, the shared
+  customer email, the two orders with mismatched totals).
+- Helped debug: e.g. a synonym-mapping bug in the BM25 index that made
+  "que horas vocês abrem?" miss the opening-hours section, and, in a final
+  review pass, a provider error on `null` optional tool arguments and a
+  prompt gap that made the return flow ask for a date instead of calling
+  the eligibility tool.
+- Structured this README so it is better organized and documented.
 
 
 ## Folder layout
